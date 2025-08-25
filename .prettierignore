@@ -1,0 +1,28 @@
+# Build outputs
+dist/
+build/
+
+# Node modules
+node_modules/
+
+# Coverage reports
+coverage/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.*.local
+
+# Database migrations (optional)
+prisma/migrations/
+
+# Git files
+.git
+.gitignore
+
+# Package manager lock files (optional)
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
