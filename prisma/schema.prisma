@@ -8,31 +8,24 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// PROJECT MODELS
-enum AuthProvider {
-  EMAIL
-  GOOGLE
-}
-
 model User {
   id                   String       @id @default(cuid())
   firstName            String
   lastName             String
   email                String       @unique
   avatar               String?
-  password             String?
+  password             String
   isVerified           Boolean      @default(false)
   authProvider         AuthProvider
   googleId             String?
-  verificationCode     Int?
+  verificationCode     String?
   verificationExpires  DateTime?
-  resetPasswordEmail   Int?
+  resetPasswordEmail   String?
   resetPasswordExpires DateTime?
   lastLoginAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
   Session              Session[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
@@ -40,15 +33,18 @@ model User {
 model Session {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
   expiresAt DateTime
-
   userAgent String?
   ipAddress String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
 }
