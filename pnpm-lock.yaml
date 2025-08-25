@@ -32,6 +32,9 @@ importers:
       nodemailer:
         specifier: ^7.0.5
         version: 7.0.5
+      prisma:
+        specifier: ^6.14.0
+        version: 6.14.0(typescript@5.9.2)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -96,9 +99,6 @@ importers:
       prettier:
         specifier: ^3.4.2
         version: 3.6.2
-      prisma:
-        specifier: ^6.14.0
-        version: 6.14.0(typescript@5.9.2)
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
