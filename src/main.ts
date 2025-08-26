@@ -2,23 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
-import { Express } from 'express';
 
-async function createNestApp(expressApp: Express) {
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressApp),
-    {
-      logger: ['error', 'warn', 'log', 'debug'],
-      cors: true,
-    },
-  );
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug'],
+    cors: true,
+  });
+
   const API_PREFIX = "/api/v1";
   app.setGlobalPrefix(API_PREFIX);
+
   app.enableCors({
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -34,27 +29,9 @@ async function createNestApp(expressApp: Express) {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  const httpAdapter = app.getHttpAdapter();
-  httpAdapter.get('/', (req, res) => {
-    res.send('🚀 Server is running!');
-  });
-  return app;
-}
-
-const server: Express = express();
-let nestApp;
-
-async function bootstrap() {
-  nestApp = await createNestApp(server);
-  await nestApp.init();
-
-  if (process.env.VERCEL !== '1') {
-    const port = process.env.PORT || 3020;
-    await nestApp.listen(port);
-    console.log(`Application is running on: http://localhost:${port}`);
-  }
+  const port = process.env.PORT || 3020;
+  await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
 }
 
 bootstrap();
-
-export default server;
