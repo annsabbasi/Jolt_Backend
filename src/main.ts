@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { API_PREFIX } from './shared/constants/global.constants';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -16,7 +15,7 @@ async function createNestApp(expressApp: Express) {
       cors: true,
     },
   );
-
+  const API_PREFIX = "/api/v1";
   app.setGlobalPrefix(API_PREFIX);
   app.enableCors({
     origin: '*',
