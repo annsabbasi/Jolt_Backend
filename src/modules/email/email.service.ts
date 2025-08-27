@@ -1,19 +1,25 @@
 import { Injectable } from "@nestjs/common";
 import * as nodemailer from 'nodemailer';
 
-
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
+
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt('25'),
-      secure: false,
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: false,               // use STARTTLS, not SSL
+      requireTLS: true,            // force STARTTLS
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        pass: process.env.SMTP_PASS, // must be App Password
       },
+      tls: {
+        ciphers: process.env.SMTP_TLS_CIPHERS || "TLSv1.2",
+      },
+      logger: true,   // enable logs for debugging
+      debug: true,
     });
   }
 
@@ -24,8 +30,8 @@ export class EmailService {
       from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
       to: email,
       subject: 'Verify Your Email Address',
-      html: htmlContent
-    })
+      html: htmlContent,
+    });
   }
 
   async sendPasswordResetEmail(email: string, code: number, firstName: string) {
