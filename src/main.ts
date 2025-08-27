@@ -13,8 +13,9 @@ async function bootstrap() {
   app.setGlobalPrefix(API_PREFIX);
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [process.env.FRONTEND_URL || 'http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 

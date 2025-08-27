@@ -100,7 +100,7 @@ export class AuthService {
             throw new BadRequestException('User not found');
         }
 
-        if (user.verificationCode! == code || !user.verificationExpires || user.verificationExpires < new Date()) {
+        if (user.verificationCode !== code || !user.verificationExpires || user.verificationExpires < new Date()) {
             throw new BadRequestException('Invalid or expired verification code');
         }
 
@@ -188,6 +188,7 @@ export class AuthService {
                     isVerified: true,
                     authProvider: 'GOOGLE',
                     googleId: googleUser.id,
+                    password: null
                 },
             });
         }
