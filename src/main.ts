@@ -13,7 +13,7 @@ async function bootstrap() {
   app.setGlobalPrefix(API_PREFIX);
 
   app.enableCors({
-    origin: ['https://jolt-frontend-khaki.vercel.app', 'http://localhost:3000'],
+    origin: process.env.PRODUCTION_URL,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
