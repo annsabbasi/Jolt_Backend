@@ -1,45 +1,47 @@
 import { Injectable } from "@nestjs/common";
-import * as nodemailer from 'nodemailer';
-
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private resend: Resend;
+
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   async sendVerificationEmail(email: string, code: number, firstName: string) {
     const htmlContent = this.getVerificationEmailTemplate(code, firstName);
 
-    await this.transporter.sendMail({
-      from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
-      to: email,
-      subject: 'Verify Your Email Address',
-      html: htmlContent
-    })
+    try {
+      await this.resend.emails.send({
+        from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM || process.env.RESEND_FROM}>`,
+        to: email,
+        subject: 'Verify Your Email Address',
+        html: htmlContent
+      });
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      throw error;
+    }
   }
 
   async sendPasswordResetEmail(email: string, code: number, firstName: string) {
     const htmlContent = this.getPasswordResetEmailTemplate(code, firstName);
 
-    await this.transporter.sendMail({
-      from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
-      to: email,
-      subject: 'Reset Your Password',
-      html: htmlContent,
-    });
+    try {
+      await this.resend.emails.send({
+        from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM || process.env.RESEND_FROM}>`,
+        to: email,
+        subject: 'Reset Your Password',
+        html: htmlContent,
+      });
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw error;
+    }
   }
 
-
+  // Keep the same template methods (they don't need to change)
   private getVerificationEmailTemplate(code: number, firstName: string): string {
     return `
       <!DOCTYPE html>
