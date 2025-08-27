@@ -4,44 +4,44 @@ import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-    private transporter: nodemailer.Transporter;
-    constructor() {
-        this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMPT_PORT || '587'),
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-    }
+  private transporter: nodemailer.Transporter;
+  constructor() {
+    this.transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
 
-    async sendVerificationEmail(email: string, code: number, firstName: string) {
-        const htmlContent = this.getVerificationEmailTemplate(code, firstName);
+  async sendVerificationEmail(email: string, code: number, firstName: string) {
+    const htmlContent = this.getVerificationEmailTemplate(code, firstName);
 
-        await this.transporter.sendMail({
-            from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
-            to: email,
-            subject: 'Verify Your Email Address',
-            html: htmlContent
-        })
-    }
+    await this.transporter.sendMail({
+      from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
+      to: email,
+      subject: 'Verify Your Email Address',
+      html: htmlContent
+    })
+  }
 
-    async sendPasswordResetEmail(email: string, code: number, firstName: string) {
-        const htmlContent = this.getPasswordResetEmailTemplate(code, firstName);
+  async sendPasswordResetEmail(email: string, code: number, firstName: string) {
+    const htmlContent = this.getPasswordResetEmailTemplate(code, firstName);
 
-        await this.transporter.sendMail({
-            from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
-            to: email,
-            subject: 'Reset Your Password',
-            html: htmlContent,
-        });
-    }
+    await this.transporter.sendMail({
+      from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
+      to: email,
+      subject: 'Reset Your Password',
+      html: htmlContent,
+    });
+  }
 
 
-    private getVerificationEmailTemplate(code: number, firstName: string): string {
-        return `
+  private getVerificationEmailTemplate(code: number, firstName: string): string {
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -82,10 +82,10 @@ export class EmailService {
       </body>
       </html>
     `;
-    }
+  }
 
-    private getPasswordResetEmailTemplate(code: number, firstName: string): string {
-        return `
+  private getPasswordResetEmailTemplate(code: number, firstName: string): string {
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -129,5 +129,5 @@ export class EmailService {
       </body>
       </html>
     `;
-    }
+  }
 }
