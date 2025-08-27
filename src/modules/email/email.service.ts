@@ -1,37 +1,61 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
+  private readonly logger = new Logger(EmailService.name);
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false,
-      requireTLS: true,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Add connection timeout settings
+      connectionTimeout: 30000, // 30 seconds
+      socketTimeout: 30000,     // 30 seconds
+      greetingTimeout: 30000,   // 30 seconds
+      // Additional security settings
       tls: {
-        ciphers: process.env.SMTP_TLS_CIPHERS || "TLSv1.2",
-      },
-      logger: true,
-      debug: true,
+        ciphers: process.env.SMTP_TLS_CIPHERS || 'TLSv1.2',
+        rejectUnauthorized: false
+      }
     });
+
+    // Verify connection configuration
+    this.verifyConnection();
+  }
+
+  private async verifyConnection() {
+    try {
+      await this.transporter.verify();
+      this.logger.log('SMTP connection verified successfully');
+    } catch (error) {
+      this.logger.error('SMTP connection failed:', error);
+    }
   }
 
   async sendVerificationEmail(email: string, code: number, firstName: string) {
-    const htmlContent = this.getVerificationEmailTemplate(code, firstName);
+    try {
+      const htmlContent = this.getVerificationEmailTemplate(code, firstName);
 
-    await this.transporter.sendMail({
-      from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
-      to: email,
-      subject: 'Verify Your Email Address',
-      html: htmlContent,
-    });
+      const info = await this.transporter.sendMail({
+        from: `"${process.env.APP_NAME}" <${process.env.SMTP_FROM}>`,
+        to: email,
+        subject: 'Verify Your Email Address',
+        html: htmlContent
+      });
+
+      this.logger.log(`Verification email sent to ${email}: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send verification email to ${email}:`, error);
+      throw error;
+    }
   }
 
   async sendPasswordResetEmail(email: string, code: number, firstName: string) {
