@@ -5,22 +5,21 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
 }
 
-// PROJECT MODELS
 enum AuthProvider {
   EMAIL
   GOOGLE
 }
 
 model User {
-  id                   String       @id @default(cuid())
-  firstName            String
-  lastName             String
-  email                String       @unique
-  avatar               String?
-  password             String?
+  id        String  @id @default(cuid())
+  firstName String?
+  lastName  String?
+  email     String  @unique
+  avatar    String?
+  password  String?
+
   isVerified           Boolean      @default(false)
   authProvider         AuthProvider
   googleId             String?
@@ -31,8 +30,32 @@ model User {
   lastLoginAt          DateTime?
   Session              Session[]
 
+  // Subscription & Plan
+  planType           PlanType           @default(STARTER)
+  subscriptionId     String?
+  stripeCustomerId   String?            @unique
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  subscriptionEndsAt DateTime?
+  trialEndsAt        DateTime?
+
+  // Usage Tracking
+  aiPostsUsed   Int @default(0)
+  aiPostsLimit  Int @default(100)
+  accountsLimit Int @default(6)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  accounts         SocialAccount[]
+  posts            Post[]
+  analytics        Analytics[]
+  workspaces       WorkspaceMember[]
+  ownedWorkspaces  Workspace[]        @relation("WorkspaceOwner")
+  contentLibrary   ContentLibrary[]
+  approvals        ApprovalWorkflow[] @relation("ApprovalUser")
+  createdApprovals ApprovalWorkflow[] @relation("ApprovalCreator")
+  aiUsage          AIUsage[]
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -51,4 +74,403 @@ model Session {
   updatedAt DateTime @updatedAt
 
   @@map("sessions")
+}
+
+enum PlanType {
+  STARTER
+  PROFESSIONAL
+  AGENCY
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  TRIAL
+  PAST_DUE
+}
+
+model SocialAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  platform    Platform
+  accountId   String
+  username    String
+  displayName String?
+  avatar      String?
+
+  // OAuth Credentials
+  accessToken    String
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+
+  // Account Stats
+  followersCount Int?
+  followingCount Int?
+  postsCount     Int?
+
+  isActive     Boolean @default(true)
+  autoPosting  Boolean @default(true)
+  optimalTimes Json?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSyncAt DateTime?
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts     PostSocialAccount[]
+  analytics Analytics[]
+
+  @@unique([userId, platform, accountId])
+  @@map("social_accounts")
+}
+
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+  TWITTER
+  LINKEDIN
+  TIKTOK
+}
+
+model Post {
+  id          String  @id @default(cuid())
+  userId      String
+  workspaceId String?
+
+  content  String
+  hashtags String[]
+  mentions String[]
+
+  mediaUrls Json?
+  mediaType MediaType?
+
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  status      PostStatus @default(DRAFT)
+
+  isAiGenerated Boolean @default(false)
+  aiPrompt      String?
+  brandVoice    String?
+
+  campaignId String?
+  tags       String[]
+  category   String?
+
+  isEvergreen  Boolean @default(false)
+  recycleCount Int     @default(0)
+  maxRecycles  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      Workspace?          @relation(fields: [workspaceId], references: [id])
+  campaign       Campaign?           @relation(fields: [campaignId], references: [id])
+  socialAccounts PostSocialAccount[]
+  analytics      PostAnalytics[]
+  approvals      ApprovalWorkflow[]
+
+  @@map("posts")
+}
+
+model PostSocialAccount {
+  id              String @id @default(cuid())
+  postId          String
+  socialAccountId String
+
+  // Platform-specific data
+  platformPostId String?
+  customContent  String?
+  customHashtags String[]
+
+  status       PostStatus @default(SCHEDULED)
+  publishedAt  DateTime?
+  errorMessage String?
+
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, socialAccountId])
+  @@map("post_social_accounts")
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL
+  STORY
+}
+
+model Campaign {
+  id          String  @id @default(cuid())
+  userId      String
+  workspaceId String?
+
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+
+  isActive Boolean @default(true)
+  color    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+  posts     Post[]
+
+  @@map("campaigns")
+}
+
+model ContentLibrary {
+  id          String  @id @default(cuid())
+  userId      String
+  workspaceId String?
+
+  name        String
+  description String?
+  mediaUrl    String
+  mediaType   MediaType
+  tags        String[]
+
+  // Usage tracking
+  usageCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+
+  @@map("content_library")
+}
+
+model Workspace {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+
+  // Settings
+  isActive Boolean @default(true)
+  logo     String?
+
+  // White-labeling (for agencies)
+  customDomain String? @unique
+  brandColors  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner          User               @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members        WorkspaceMember[]
+  posts          Post[]
+  campaigns      Campaign[]
+  contentLibrary ContentLibrary[]
+  approvals      ApprovalWorkflow[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(VIEWER)
+
+  // Permissions
+  canCreatePosts   Boolean @default(false)
+  canEditPosts     Boolean @default(false)
+  canPublishPosts  Boolean @default(false)
+  canViewAnalytics Boolean @default(true)
+  canManageTeam    Boolean @default(false)
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model ApprovalWorkflow {
+  id           String  @id @default(cuid())
+  postId       String
+  workspaceId  String
+  createdById  String
+  assignedToId String?
+
+  status   ApprovalStatus @default(PENDING)
+  message  String?
+  feedback String?
+
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+
+  post       Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy  User      @relation("ApprovalCreator", fields: [createdById], references: [id])
+  assignedTo User?     @relation("ApprovalUser", fields: [assignedToId], references: [id])
+
+  @@map("approval_workflows")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+model Analytics {
+  id              String @id @default(cuid())
+  userId          String
+  socialAccountId String
+
+  date DateTime
+
+  // Metrics
+  impressions Int @default(0)
+  reach       Int @default(0)
+  engagements Int @default(0)
+  likes       Int @default(0)
+  comments    Int @default(0)
+  shares      Int @default(0)
+  clicks      Int @default(0)
+  saves       Int @default(0)
+
+  followersGained Int @default(0)
+  followersLost   Int @default(0)
+  totalFollowers  Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([socialAccountId, date])
+  @@map("analytics")
+}
+
+model PostAnalytics {
+  id     String @id @default(cuid())
+  postId String
+
+  // Engagement metrics
+  impressions Int @default(0)
+  reach       Int @default(0)
+  likes       Int @default(0)
+  comments    Int @default(0)
+  shares      Int @default(0)
+  clicks      Int @default(0)
+  saves       Int @default(0)
+
+  // Performance scores
+  engagementRate Float?
+  reachRate      Float?
+
+  lastUpdated DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId])
+  @@map("post_analytics")
+}
+
+model AIUsage {
+  id     String @id @default(cuid())
+  userId String
+
+  // Usage details
+  feature    AIFeature
+  tokensUsed Int
+  cost       Float?
+
+  prompt   String?
+  response String?
+  model    String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_usage")
+}
+
+enum AIFeature {
+  CAPTION_GENERATION
+  HASHTAG_GENERATION
+  IMAGE_GENERATION
+  POST_OPTIMIZATION
+  CONTENT_SUGGESTION
+  BRAND_VOICE_ANALYSIS
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+
+  type    NotificationType
+  title   String
+  message String
+  data    Json?
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  POST_PUBLISHED
+  POST_FAILED
+  APPROVAL_REQUIRED
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+  ACCOUNT_CONNECTED
+  ACCOUNT_DISCONNECTED
+  SUBSCRIPTION_EXPIRED
+  USAGE_LIMIT_REACHED
+  SYSTEM_ANNOUNCEMENT
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  // Metadata
+  description String?
+  category    String?
+  isPublic    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
 }

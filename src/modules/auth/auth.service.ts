@@ -141,7 +141,7 @@ export class AuthService {
         });
 
         // Send reset email
-        await this.emailService.sendPasswordResetEmail(email, resetCode, user.firstName)
+        await this.emailService.sendPasswordResetEmail(email, resetCode, user.firstName ?? '')
         return { message: 'The reset Code has been send to you email address' }
     }
 
