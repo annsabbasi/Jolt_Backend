@@ -7,12 +7,15 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
+      },
+      tls: {
+        ciphers: 'SSLv3',
       },
     });
   }
